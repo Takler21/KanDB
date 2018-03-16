@@ -47,7 +47,7 @@ export class CardListComponent implements OnInit {
                 this.existSub = this.subcardlists.length != 0;
                 //En desarrollo.
                 //Esto en el complete()
-                
+
             },
             error => this.msg = error,
             () => {
@@ -66,7 +66,7 @@ export class CardListComponent implements OnInit {
                     this.loadCardWithSublists();
                 }
             }
-        );
+            );
 
         //fill allowed drop-from containers
 
@@ -74,32 +74,45 @@ export class CardListComponent implements OnInit {
         //los card list y filtrar o lo que sea por orden.
         //luego comprobar si el siguiente tiene subcardlist
         this.allowedDropFrom = [];
-        this._userService.get(Global.BASE_CARDLIST_ENDPOINT).subscribe(p => {
-            let carp = p.filter(cardlist => cardlist.projectId == (this.item.projectId))
-            this.allowedDropFrom = [];
-            carp.forEach(p1 => {
-                if (p1.order == this.item.order - 1)
-                    this.allowedDropFrom.push(p1.Id);
-                //Hasta aqui permite el pase de cardlist normales
+        var carp
+        this._userService.get(Global.BASE_CARDLIST_ENDPOINT)
+            .subscribe(p => {
+                carp = p.filter(cardlist => cardlist.projectId == (this.item.projectId))
+                //Esto en complete()
+            },
+            error => this.msg = error,
+            () => {
+                this.allowedDropFrom = [];
+                carp.forEach(p1 => {
+                    if (p1.order == this.item.order - 1)
+                        this.allowedDropFrom.push(p1.Id);
+                    //Hasta aqui permite el pase de cardlist normales
+                });
+                //Add subcardlists keys to allowedDropFrom variable.
+                this._userService.get(Global.BASE_SUBCARDLIST_ENDPOINT)
+                    .subscribe(data => {
+                        //aqui deberia hacer un foreach? MODIFICANDO
+                        var sublist = data.filter(subcardlist => subcardlist.cardlistId == (this.allowedDropFrom[0]))
+                        if (sublist.length > 0 && this.item.order != 0)
+                            sublist.forEach(sub => {
+                                this.allowedDropFrom.push(sub.Id);
+                            })
+                    },
+                    error => this.msg = error,
+                    () => {
+                        //Let change card between subcardlist in the same card list
+                        if (this.subcardlists && this.subcardlists.length > 0) {
+                            this.subcardlists.forEach(sub => {
+                                this.allowedDropFrom.push(sub.Id);
+                            }
+                            );
+                        }
+                    })
+
             });
-            //Add subcardlists keys to allowedDropFrom variable.
-            this.dataService.getSubCardListsByListId(this.allowedDropFrom[0])
-                .subscribe(data => {
-                    if (data.length > 0 && this.item.order != 0)
-                        data.forEach(sub => {
-                            this.allowedDropFrom.push(sub.Id);
-                        })
-                })
-            //Let change card between subcardlist in the same card list
-            if (this.subcardlists && this.subcardlists.length > 0) {
-                this.subcardlists.forEach(sub => {
-                    this.allowedDropFrom.push(sub.Id);
-                }
-                );
-            }
-        });
         //fill if it has next containers
         //filtrar por order.
+        //filtra tambien el projecto?
         this.dataService.getCardListsByOrder(this.item.order + 1)
             .subscribe(d => {
                 if (d.length > 0)
@@ -193,7 +206,7 @@ export class CardListComponent implements OnInit {
 
     deleteCard(card) {
         this._userService.delete(Global.BASE_CARDS_ENDPOINT, card.Id);
-                
+
         this.loadCardWithSublists();
     }
     //ya tengo cards por lo que otro subcribe seria innecesario, me vale con recorre el arra
@@ -209,7 +222,7 @@ export class CardListComponent implements OnInit {
         let tasks;
         this.cards.forEach(c => {
             this._userService.delete(Global.BASE_CARDS_ENDPOINT, c.Id)
-                });
+        });
         this.subcardlists.forEach(sub => {
             this._userService.delete(Global.BASE_SUBCARDLIST_ENDPOINT, sub.Id);
         })
@@ -218,7 +231,7 @@ export class CardListComponent implements OnInit {
         //que tenga que llevarlo fuera.
         //this.dataService.getCardLists().subscribe(p => {
         //    var carp = p.filter(cardlist => cardlist.projectId == (this.item.projectId))
-            //this.resetOrder(carp);
+        //this.resetOrder(carp);
         //});
     }
     //Funcion para regular el desplegable
